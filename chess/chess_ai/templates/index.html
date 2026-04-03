@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chess AI Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ── Reset & Variables ────────────────────────────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0d0d0f;
+        --surface: #141418;
+        --surface2: #1c1c22;
+        --border: #2a2a35;
+        --accent: #c9a84c;
+        --accent2: #e8c97a;
+        --text: #e8e6e0;
+        --text-dim: #8a8880;
+        --white-sq: #f0d9b5;
+        --black-sq: #b58863;
+        --highlight: rgba(201, 168, 76, 0.45);
+        --legal-dot: rgba(201, 168, 76, 0.55);
+        --check-sq: rgba(220, 50, 50, 0.65);
+        --radius: 8px;
+        --font-display: "Playfair Display", serif;
+        --font-mono: "JetBrains Mono", monospace;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-mono);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ── Header ─────────────────────────────────────────────────────────────── */
+      header {
+        border-bottom: 1px solid var(--border);
+        padding: 18px 32px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: var(--surface);
+      }
+      header h1 {
+        font-family: var(--font-display);
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--accent);
+        letter-spacing: 0.02em;
+      }
+      .badge {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+        border: 1px solid var(--accent);
+        border-radius: 3px;
+        color: var(--accent);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .header-nav {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+      }
+      .nav-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        padding: 7px 16px;
+        border-radius: var(--radius);
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .nav-btn:hover,
+      .nav-btn.active {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* ── Layout ─────────────────────────────────────────────────────────────── */
+      .app {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 260px 1fr 280px;
+        gap: 0;
+        overflow: hidden;
+      }
+      @media (max-width: 1100px) {
+        .app {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto 1fr auto;
+        }
+      }
+
+      /* ── Sidebar ─────────────────────────────────────────────────────────────── */
+      .sidebar {
+        border-right: 1px solid var(--border);
+        padding: 20px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        background: var(--surface);
+        overflow-y: auto;
+      }
+      .sidebar-right {
+        border-left: 1px solid var(--border);
+        border-right: none;
+      }
+      .section-title {
+        font-size: 0.65rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 10px;
+      }
+
+      /* ── Control Groups ─────────────────────────────────────────────────────── */
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      label {
+        font-size: 0.75rem;
+        color: var(--text-dim);
+        margin-bottom: 2px;
+      }
+      select,
+      input {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 8px 10px;
+        border-radius: var(--radius);
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        width: 100%;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      select:focus,
+      input:focus {
+        border-color: var(--accent);
+      }
+      select option {
+        background: var(--surface2);
+      }
+
+      .btn {
+        padding: 10px 18px;
+        border-radius: var(--radius);
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        letter-spacing: 0.04em;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #0d0d0f;
+      }
+      .btn-primary:hover {
+        background: var(--accent2);
+      }
+      .btn-ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+      }
+      .btn-ghost:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .btn-danger {
+        background: transparent;
+        border: 1px solid #c04040;
+        color: #e06060;
+      }
+      .btn-danger:hover {
+        background: #c04040;
+        color: #fff;
+      }
+
+      /* ── Status Panel ───────────────────────────────────────────────────────── */
+      .status-panel {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px;
+      }
+      .status-turn {
+        font-size: 1rem;
+        font-family: var(--font-display);
+        font-weight: 600;
+        color: var(--accent);
+      }
+      .status-info {
+        font-size: 0.75rem;
+        color: var(--text-dim);
+        margin-top: 4px;
+      }
+      .check-badge {
+        display: inline-block;
+        background: #c04040;
+        color: #fff;
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 3px;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+
+      /* ── Move Log ───────────────────────────────────────────────────────────── */
+      .move-log {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px;
+        max-height: 240px;
+        overflow-y: auto;
+        font-size: 0.75rem;
+        line-height: 1.8;
+      }
+      .move-log::-webkit-scrollbar {
+        width: 4px;
+      }
+      .move-log::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .move-log::-webkit-scrollbar-thumb {
+        background: var(--border);
+      }
+      .move-pair {
+        display: flex;
+        gap: 6px;
+        padding: 1px 0;
+      }
+      .move-num {
+        color: var(--text-dim);
+        min-width: 24px;
+      }
+      .move-w {
+        color: var(--text);
+        min-width: 60px;
+      }
+      .move-b {
+        color: var(--text-dim);
+      }
+
+      /* ── Metrics Card ───────────────────────────────────────────────────────── */
+      .metrics-card {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px;
+      }
+      .metric-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.74rem;
+        padding: 4px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .metric-row:last-child {
+        border-bottom: none;
+      }
+      .metric-label {
+        color: var(--text-dim);
+      }
+      .metric-value {
+        color: var(--accent);
+        font-weight: 500;
+      }
+
+      /* ── Board Center ───────────────────────────────────────────────────────── */
+      .board-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        gap: 12px;
+      }
+      .board-wrapper {
+        position: relative;
+      }
+      .board-container {
+        display: grid;
+        grid-template-columns: 24px repeat(8, 1fr);
+        grid-template-rows: repeat(8, 1fr) 24px;
+        width: min(560px, calc(100vw - 600px));
+        height: min(560px, calc(100vw - 600px));
+        min-width: 320px;
+        min-height: 320px;
+        user-select: none;
+      }
+      @media (max-width: 1100px) {
+        .board-container {
+          width: min(480px, calc(100vw - 40px));
+          height: min(480px, calc(100vw - 40px));
+        }
+      }
+      .rank-label,
+      .file-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.68rem;
+        color: var(--text-dim);
+      }
+
+      .sq {
+        position: relative;
+        cursor: pointer;
+        transition: filter 0.1s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sq.light {
+        background: var(--white-sq);
+      }
+      .sq.dark {
+        background: var(--black-sq);
+      }
+      .sq.selected {
+        background: var(--highlight) !important;
+        box-shadow: inset 0 0 0 3px var(--accent);
+      }
+      .sq.legal-target::after {
+        content: "";
+        position: absolute;
+        width: 30%;
+        height: 30%;
+        border-radius: 50%;
+        background: var(--legal-dot);
+        pointer-events: none;
+      }
+      .sq.legal-capture::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: inset 0 0 0 4px var(--legal-dot);
+        pointer-events: none;
+      }
+      .sq.in-check {
+        background: var(--check-sq) !important;
+      }
+      .sq:hover {
+        filter: brightness(1.08);
+      }
+
+      .piece {
+        font-size: calc(min(560px, calc(100vw - 600px)) / 8 * 0.78);
+        line-height: 1;
+        pointer-events: none;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        transition: transform 0.12s;
+      }
+      .sq.selected .piece {
+        transform: scale(1.12);
+      }
+
+      /* ── Promotion Modal ────────────────────────────────────────────────────── */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-overlay.open {
+        display: flex;
+      }
+      .modal {
+        background: var(--surface);
+        border: 1px solid var(--accent);
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+      }
+      .modal h3 {
+        font-family: var(--font-display);
+        color: var(--accent);
+        margin-bottom: 16px;
+      }
+      .promo-choices {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+      }
+      .promo-btn {
+        font-size: 2.5rem;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .promo-btn:hover {
+        border-color: var(--accent);
+        background: var(--highlight);
+      }
+
+      /* ── Comparison Tab ─────────────────────────────────────────────────────── */
+      #tab-compare {
+        display: none;
+      }
+      .compare-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .compare-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+      }
+      .compare-card h3 {
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        color: var(--accent);
+        margin-bottom: 16px;
+      }
+      .compare-stat {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.82rem;
+      }
+      .compare-stat:last-child {
+        border-bottom: none;
+      }
+      .stat-label {
+        color: var(--text-dim);
+      }
+      .stat-val {
+        color: var(--text);
+        font-weight: 500;
+      }
+      .no-data {
+        color: var(--text-dim);
+        font-size: 0.85rem;
+        text-align: center;
+        padding: 20px;
+      }
+
+      /* ── Report Tab ─────────────────────────────────────────────────────────── */
+      #tab-report {
+        display: none;
+        padding: 32px;
+        max-width: 820px;
+        margin: 0 auto;
+        line-height: 1.8;
+      }
+      #tab-report h2 {
+        font-family: var(--font-display);
+        font-size: 1.8rem;
+        color: var(--accent);
+        margin-bottom: 8px;
+      }
+      #tab-report h3 {
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        color: var(--accent2);
+        margin: 24px 0 8px;
+      }
+      #tab-report p,
+      #tab-report li {
+        font-size: 0.88rem;
+        color: var(--text);
+      }
+      #tab-report ul {
+        padding-left: 20px;
+      }
+      #tab-report li {
+        margin: 4px 0;
+      }
+      #tab-report code {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.82rem;
+      }
+      .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+        font-size: 0.82rem;
+      }
+      .report-table th,
+      .report-table td {
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        text-align: left;
+      }
+      .report-table th {
+        background: var(--surface2);
+        color: var(--accent);
+      }
+
+      /* ── Toast ───────────────────────────────────────────────────────────────── */
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--surface);
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 0.82rem;
+        z-index: 200;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+
+      /* ── Loader ─────────────────────────────────────────────────────────────── */
+      .thinking {
+        position: absolute;
+        inset: 0;
+        background: rgba(13, 13, 15, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        color: var(--accent);
+        gap: 10px;
+        flex-direction: column;
+      }
+      .thinking.active {
+        display: flex;
+      }
+      .spinner {
+        width: 28px;
+        height: 28px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>♟ Chess AI Lab</h1>
+      <span class="badge">AI Course</span>
+      <nav class="header-nav">
+        <button class="nav-btn active" onclick="showTab('game')">Game</button>
+      </nav>
+    </header>
+
+    <!-- ── GAME TAB ──────────────────────────────────────────────────────────── -->
+    <div id="tab-game" class="app">
+      <!-- Left sidebar: settings -->
+      <aside class="sidebar">
+        <div>
+          <div class="section-title">New Game</div>
+          <div class="control-group">
+            <label>White player</label>
+            <select id="white-algo">
+              <option value="human">Human</option>
+              <option value="alphabeta">Alpha-Beta</option>
+              <option value="mcts">MCTS</option>
+            </select>
+            <label>Black player</label>
+            <select id="black-algo">
+              <option value="alphabeta" selected>Alpha-Beta</option>
+              <option value="mcts">MCTS</option>
+              <option value="human">Human</option>
+            </select>
+            <label>Difficulty</label>
+            <select id="difficulty">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+            <button class="btn btn-primary" onclick="startGame()">
+              ▶ Start Game
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">Status</div>
+          <div class="status-panel" id="status-panel">
+            <div class="status-turn" id="status-turn">No game</div>
+            <div class="status-info" id="status-info">
+              Start a new game above
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">Move Log</div>
+          <div class="move-log" id="move-log">
+            <span style="color: var(--text-dim); font-size: 0.75rem"
+              >No moves yet.</span
+            >
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center: board -->
+      <main class="board-area">
+        <div class="board-wrapper">
+          <div id="thinking-overlay" class="thinking">
+            <div class="spinner"></div>
+            <span id="thinking-label">Thinking…</span>
+          </div>
+          <div class="board-container" id="board"></div>
+        </div>
+      </main>
+
+      <!-- Right sidebar: metrics -->
+      <aside class="sidebar sidebar-right">
+        <div>
+          <div class="section-title">Session Stats</div>
+          <div class="metrics-card">
+            <div class="metric-row">
+              <span class="metric-label">Games played</span
+              ><span class="metric-value" id="s-games">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Current move</span
+              ><span class="metric-value" id="s-move">—</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Game ID</span
+              ><span class="metric-value" id="s-id" style="font-size: 0.68rem"
+                >—</span
+              >
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ── Promotion Modal ────────────────────────────────────────────────────── -->
+    <div class="modal-overlay" id="promo-modal">
+      <div class="modal">
+        <h3>Promote Pawn</h3>
+        <div class="promo-choices">
+          <button class="promo-btn" onclick="choosePromotion(5)">♛</button>
+          <button class="promo-btn" onclick="choosePromotion(4)">♜</button>
+          <button class="promo-btn" onclick="choosePromotion(3)">♝</button>
+          <button class="promo-btn" onclick="choosePromotion(2)">♞</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/js/chess.js"></script>
+  </body>
+</html>
